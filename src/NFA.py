@@ -43,32 +43,49 @@ class NFA:
     def get_start_id(self) -> int:
         return id(self.states[0])
 
-    # self other TODO:此处拼接操作会对self中的状态产生影响，需要消除该处副作用
-    def concat(self, other):
-        states=self.states + other.states
-        self_term_states=map(lambda i: self.get_state_by_id(i), self.terms)
+    # 输出形式为记录各边的顺序表
+    def __str__(self):
+        display=[]
 
-        # 为self的所有终态，增加无条件转换到other的初始状态的边
-        for state in self_term_states:
-            try:
-                epsilon_set=state[epsilon]  # 考虑本身存在边的情况
-                state[epsilon]=epsilon_set | {other.get_start_id()}
-            except KeyError:
-                state[epsilon]={other.get_start_id()}
+        id_index_lookup=dict(
+            map(lambda i: (id(i[1]), i[0]), enumerate(self.states))
+        )
+        for state in self.states:
+            for key in state.keys():
+                for end in state[key]:
+                    display.append(str(id_index_lookup[id(state)]) + "-" + key + "->" + str(id_index_lookup[end]))
+        return str(display)
 
-        return NFA(states, other.terms)
-
-    def union(self, other):
-        self_start_id=self.get_start_id()
-        other_start_id=other.get_start_id()
-
-        states: List=self.states + other.states
-        states.insert(0, {epsilon: {self_start_id, other_start_id}})
-
-        return NFA(states, self.terms | other.terms)
+    # 用于表示对象
+    def __repr__(self):
+        return str(self)
 
 
+# self other TODO:此处拼接操作会对self中的状态产生影响，需要消除该处副作用
+def concat(self: NFA, other: NFA) -> NFA:
+    states=self.states + other.states
+    self_term_states=map(lambda i: self.get_state_by_id(i), self.terms)
 
+    # 为self的所有终态，增加无条件转换到other的初始状态的边
+    for state in self_term_states:
+        try:
+            epsilon_set=state[epsilon]  # 考虑本身存在边的情况
+            state[epsilon]=epsilon_set | {other.get_start_id()}
+        except KeyError:
+            state[epsilon]={other.get_start_id()}
+
+    return NFA(states, other.terms)
+
+
+# self | other
+def union(self: NFA, other: NFA) -> NFA:
+    self_start_id=self.get_start_id()
+    other_start_id=other.get_start_id()
+
+    states: List=self.states + other.states
+    states.insert(0, {epsilon: {self_start_id, other_start_id}})
+
+    return NFA(states, self.terms | other.terms)
 
 
 class Token:
