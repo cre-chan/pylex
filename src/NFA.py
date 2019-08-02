@@ -1,6 +1,7 @@
 # -*-coding:utf-8 -*-
 
 from typing import List, Set, Dict
+from copy import copy
 
 # 特殊常量epsilon
 epsilon='ε'
@@ -37,6 +38,10 @@ class NFA:
 
         return NFA(states, {id(states[-1])})
 
+    # 返回一个由终结状态组成的迭代器
+    def get_terminators(self):
+        return map(lambda term_id: self.get_state_by_id(term_id), self.terms)
+
     def get_state_by_id(self, state_id: int) -> State:
         return self.id_look_up[state_id]
 
@@ -45,16 +50,7 @@ class NFA:
 
     # 输出形式为记录各边的顺序表
     def __str__(self):
-        display=[]
-
-        id_index_lookup=dict(
-            map(lambda i: (id(i[1]), i[0]), enumerate(self.states))
-        )
-        for state in self.states:
-            for key in state.keys():
-                for end in state[key]:
-                    display.append(str(id_index_lookup[id(state)]) + "-" + key + "->" + str(id_index_lookup[end]))
-        return str(display)
+        return str(NFASerialized(self))
 
     # 用于表示对象
     def __repr__(self):
@@ -62,30 +58,88 @@ class NFA:
 
 
 # self other TODO:此处拼接操作会对self中的状态产生影响，需要消除该处副作用
-def concat(self: NFA, other: NFA) -> NFA:
-    states=self.states + other.states
-    self_term_states=map(lambda i: self.get_state_by_id(i), self.terms)
+def concat(first: NFA, second: NFA) -> NFA:
+    states=first.states + second.states
+    self_term_states=first.get_terminators()
 
     # 为self的所有终态，增加无条件转换到other的初始状态的边
     for state in self_term_states:
         try:
             epsilon_set=state[epsilon]  # 考虑本身存在边的情况
-            state[epsilon]=epsilon_set | {other.get_start_id()}
+            state[epsilon]=epsilon_set | {second.get_start_id()}
         except KeyError:
-            state[epsilon]={other.get_start_id()}
+            state[epsilon]={second.get_start_id()}
 
-    return NFA(states, other.terms)
+    return NFA(states, second.terms)
 
 
 # self | other
-def union(self: NFA, other: NFA) -> NFA:
-    self_start_id=self.get_start_id()
+def union(first: NFA, other: NFA) -> NFA:
+    self_start_id=first.get_start_id()
     other_start_id=other.get_start_id()
 
-    states: List=self.states + other.states
+    states: List=first.states + other.states
     states.insert(0, {epsilon: {self_start_id, other_start_id}})
 
-    return NFA(states, self.terms | other.terms)
+    return NFA(states, first.terms | other.terms)
+
+
+# op* TODO:该操作会对op中states产生更改，需要消除副作用
+def kleen(op: NFA) -> NFA:
+    term_set=set(map(lambda term_state: id(term_state), op.get_terminators()))
+    try:
+        start_epsilon=op.states[0][epsilon]
+        op.states[0][epsilon]=start_epsilon | term_set
+    except KeyError:
+        op.states[0][epsilon]=term_set
+
+    return NFA(op.states, op.terms)
+
+
+# TODO:将此函数移至NFA内或者专门的状态集合内
+def kleen_closure(states_set: Set[int]) -> Set[int]:
+    pass
+
+# TODO:同上
+def closure()
+    pass
+
+
+class NFASerialized:
+    """
+    将一个NFA化为序列化形式，用于生成易于阅读的形式
+    """
+
+    def __init__(self, src: NFA):
+        stateid_index_lookup=dict(map(lambda t: (id(t[1]), t[0]), enumerate(src.states)))
+        states=[
+            copy(dic) for dic in src.states
+        ]
+        # 将src中各行复制到states中
+
+        stateid_to_index=lambda id: stateid_index_lookup[id]
+
+        for state in states:
+            for key, value in state.items():
+                state[key]=set(map(stateid_to_index, value))
+
+            terms=set(map(stateid_to_index, src.terms))
+
+            self.states=states
+            self.terms=terms
+
+    def __str__(self):
+        states=[]
+
+        for index, state in enumerate(self.states):
+            for key, value in state.items():
+                for end in value:
+                    states.append(str(index) + '-' + key + '->' + str(end))
+
+        return "states:" + str(states) + "\t terms:" + str(self.terms)
+
+    def __repr__(self):
+        return str(self)
 
 
 class Token:
