@@ -2,6 +2,7 @@
 
 from typing import List, Set, Dict
 from copy import copy
+import functools as funct
 
 # 特殊常量epsilon
 epsilon='ε'
@@ -15,9 +16,10 @@ class NFA:
     """
 
     State: type=Dict[str, Set[int]]
+    Id: type=int
 
     # basic constructor, separated for convenience's sake
-    def __init__(self, states: List[State], terms: Set):
+    def __init__(self, states: List[State], terms: Set[Id]):
         self.states=states
         self.id_look_up=dict(
             map(lambda a: (id(a), a), states)
@@ -45,8 +47,18 @@ class NFA:
     def get_state_by_id(self, state_id: int) -> State:
         return self.id_look_up[state_id]
 
-    def get_start_id(self) -> int:
+    def get_start_id(self) -> Id:
         return id(self.states[0])
+
+    def kleen_closure(self, states_set: Set[Id]) -> Set[Id]:
+        states=map(lambda i: self.id_look_up[i][epsilon] if epsilon in self.id_look_up[i] else set(), states_set)
+        new_sets=funct.reduce(lambda accum, entry: accum | entry, states, set())  # 新加入的顶点的集合
+        return states_set if new_sets == set() else self.kleen_closure(new_sets | states_set)
+
+    def closure(self, states_set: Set[Id], char: str) -> Set[Id]:
+        states=map(lambda i: self.id_look_up[i][char] if char in self.id_look_up[i] else set(), states_set)
+        result_set=funct.reduce(lambda accum, entry: accum | entry, states, set())
+        return self.kleen_closure(result_set)
 
     # 输出形式为记录各边的顺序表
     def __str__(self):
@@ -94,15 +106,6 @@ def kleen(op: NFA) -> NFA:
         op.states[0][epsilon]=term_set
 
     return NFA(op.states, op.terms)
-
-
-# TODO:将此函数移至NFA内或者专门的状态集合内
-def kleen_closure(states_set: Set[int]) -> Set[int]:
-    pass
-
-# TODO:同上
-def closure()
-    pass
 
 
 class NFASerialized:
