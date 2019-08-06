@@ -150,7 +150,13 @@ class Token:
     包装一个NFA，将NFA与相应的Token类型关联在一起，
     提供
     """
-    pass
+
+    # 终结态的ID，ID越小，优先级越高
+    terminator_id: type=int
+
+    def __init__(self, nfa: NFA, term_id: terminator_id):
+        self.nfa=nfa
+        self.state_lookup=dict(map(lambda id: (id, term_id), nfa.terms))
 
 
 if __name__ == "__main__":
