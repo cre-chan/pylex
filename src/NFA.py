@@ -51,11 +51,23 @@ class NFA:
         return id(self.states[0])
 
     def kleen_closure(self, states_set: Set[Id]) -> Set[Id]:
+        """
+
+        :param states_set:
+        :return:
+        """
         states=map(lambda i: self.id_look_up[i][epsilon] if epsilon in self.id_look_up[i] else set(), states_set)
-        new_sets=funct.reduce(lambda accum, entry: accum | entry, states, set())  # 新加入的顶点的集合
-        return states_set if new_sets == set() else self.kleen_closure(new_sets | states_set)
+        new_sets=funct.reduce(lambda accum, entry: accum | entry, states, states_set)  # 新加入的顶点的集合
+        return states_set if new_sets == states_set else self.kleen_closure(new_sets)
 
     def closure(self, states_set: Set[Id], char: str) -> Set[Id]:
+        """
+        求状态集合states_set关于字符str的闭包。若对于所有state属于states_set,self.id_look_up[i][char]均不存在，返回空集。
+        若states_set为空集，返回空集。
+        :param states_set:属于self的状态id组成的一个集合
+        :param char:长度为1的字符
+        :return:states_set的闭包
+        """
         states=map(lambda i: self.id_look_up[i][char] if char in self.id_look_up[i] else set(), states_set)
         result_set=funct.reduce(lambda accum, entry: accum | entry, states, set())
         return self.kleen_closure(result_set)
